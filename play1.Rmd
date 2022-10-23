@@ -1,0 +1,60 @@
+assess posterior predictive distributions for game scores
+
+- grab games
+- grab old ratings (note date - date is in sim_league)
+- look at games since then for which I have results
+- for each game, make some sort of 2D plot of posterior
+- add actual score
+- devise some kind of test "statistic"
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+source("functions.R")
+```
+
+grab
+
+```{r}
+games <- read_rds("../scoresway/rds/games.rds")
+league_ids <- read_rds("../ratings/league_ids.rds")
+last_dates <- get_lrdates()
+league_info <- make_league_info(league_ids, last_dates)
+```
+
+input league by number
+
+```{r}
+league_id <- 19
+prior_year <- 2023
+league_info %>% 
+  filter(r == league_id) %>% 
+  transpose() %>% pluck(1) -> this
+this
+```
+
+extract games
+
+```{r}
+games %>% 
+  filter(comp == this$id) %>% 
+  filter(time_stamp >= this$dt) %>% 
+  filter(stat == "FT") -> games_to_ppd
+games_to_ppd
+```
+
+get hold of ratings
+
+```{r}
+this$lc <- tolower(this$the_country)
+fname <- str_c("../ratings/", this$lc, "_pre_post.rds")
+fname
+rat <- read_rds(fname)
+rat
+prior_name <- str_c("../ratings/", this$lc, prior_year,"_prior.csv")
+prior_name
+read_csv(prior_name) %>% 
+  select(id, sw_id, name) -> prior
+```
+
