@@ -12,6 +12,7 @@ assess posterior predictive distributions for game scores
 library(tidyverse)
 library(lubridate)
 source("functions.R")
+# source("../ratings/pred_next_functions.R")
 ```
 
 grab
@@ -26,21 +27,14 @@ league_info <- make_league_info(league_ids, last_dates)
 input league by number
 
 ```{r}
-league_id <- 19
-prior_year <- 2023
-league_info %>% 
-  filter(r == league_id) %>% 
-  transpose() %>% pluck(1) -> this
+this <- make_llist(league_info, 20, 2023)
 this
 ```
 
 extract games
 
 ```{r}
-games %>% 
-  filter(comp == this$id) %>% 
-  filter(time_stamp >= this$dt) %>% 
-  filter(stat == "FT") -> games_to_ppd
+games_to_ppd <- extract_games_to_ppd(games, this)
 games_to_ppd
 ```
 
@@ -49,12 +43,30 @@ get hold of ratings
 ```{r}
 this$lc <- tolower(this$the_country)
 fname <- str_c("../ratings/", this$lc, "_pre_post.rds")
-fname
-rat <- read_rds(fname)
-rat
+read_rds(fname) %>% as.data.frame() -> posterior
 prior_name <- str_c("../ratings/", this$lc, prior_year,"_prior.csv")
-prior_name
 read_csv(prior_name) %>% 
   select(id, sw_id, name) -> prior
+```
+
+
+```{r}
+games_to_ppd %>% 
+  rowwise() %>% 
+  mutate(stats = list(make_random_draws(posterior, prior, t1, t2, s1, s2))) %>% 
+  mutate(min_stat = min(stats)) %>% 
+  unnest_wider(stats) %>% 
+  select(-t1, -t2) %>% 
+  arrange(min_stat)
+```
+
+
+
+
+
+
+
+```{r}
+compare_actual(randoms, actual[1], actual[2])
 ```
 
